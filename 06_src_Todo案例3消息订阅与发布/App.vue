@@ -1,0 +1,145 @@
+<template>
+  <div id="root">
+    <div class="todo-container">
+      <div class="todo-wrap">
+        <MyHeaders @addTodo="addTodo"></MyHeaders>
+        <MyList :todos="todos"></MyList>
+        <MyFooter :todos="todos" @checkAllTodo="checkAllTodo" @clearDone="clearDone"></MyFooter>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import MyHeaders from "./components/MyHeader.vue";
+import MyList from "./components/MyList.vue";
+import MyFooter from "./components/MyFooter.vue";
+import pubsub from 'pubsub-js';
+
+export default {
+  name: "App",
+  components: {
+    MyHeaders,
+    MyList,
+    MyFooter,
+  },
+  data() {
+    return {
+        todos:JSON.parse(localStorage.getItem('todo')) || []
+    }
+  },
+  methods:{
+    addTodo(todo){
+        this.todos.unshift(todo)
+    },
+    checkTodo(msg, id){
+        this.todos.forEach((todo)=>{
+            if(todo.id === id){
+                todo.done = !todo.done
+            }
+        })
+    },
+    deleteTodo(msg, id){
+        this.todos = this.todos.filter((todo)=>{
+            return todo.id !== id
+        })
+    },
+    updateTodo(msg, obj){ //_表示占位
+        this.todos.forEach((todo) => {
+          if(todo.id === obj.id){
+            todo.title = obj.title
+          }
+        })
+    },
+    checkAllTodo(value){
+        this.todos.forEach((todo) => {
+            todo.done = value
+        })
+    },
+    clearDone(){
+        this.todos = this.todos.filter((todo) => {
+            return !todo.done
+        })
+    }
+  },
+  mounted(){
+    // this.$bus.$on('checkTodo', this.checkTodo)
+    // this.$bus.$on('deleteTodo', this.deleteTodo)
+    this.pid1 = pubsub.subscribe('checkTodo', this.checkTodo)
+    this.pid2 = pubsub.subscribe('deleteTodo', this.deleteTodo)
+    this.pid3 = pubsub.subscribe('updateTodo', this.updateTodo)
+  },
+  beforeDestroy() {
+    // this.$bus.$off('checkTodo')
+    // this.$bus.$off('deleteTodo')
+    pubsub.unsubscribe(this.pid1)
+    pubsub.unsubscribe(this.pid2)
+    pubsub.unsubscribe(this.pid3)
+  },
+  watch:{
+    todos:{
+      deep:true,
+      handler(value){
+        localStorage.setItem('todo', JSON.stringify(value))
+      }
+    }
+  }
+};
+</script>
+
+<style>
+    body {
+    background: #fff;
+    }
+
+    .btn {
+    display: inline-block;
+    padding: 4px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        0 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    }
+
+    .btn-danger {
+    color: #fff;
+    background-color: #da4f49;
+    border: 1px solid #bd362f;
+    }
+
+    .btn-change {
+    color: #fff;
+    background-color: rgb(49, 128, 233);
+    border: 1px solid #1853c8;
+    margin-right: 5px;
+    }
+
+    .btn-danger:hover {
+    color: #fff;
+    background-color: #bd362f;
+    }
+
+    .btn-change:hover {
+    color: #fff;
+    background-color: #1853c8;
+    }
+
+    .btn:focus {
+    outline: none;
+    }
+
+    .todo-container {
+    width: 600px;
+    margin: 0 auto;
+    }
+    .todo-container .todo-wrap {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    }
+</style>
